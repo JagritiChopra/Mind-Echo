@@ -170,22 +170,13 @@ router.post('/firebase-login', async (req, res) => {
 
 router.post('/firebase-google-auth', async (req, res) => {
   const { idToken } = req.body;
-  
-  console.log("=== FIREBASE GOOGLE AUTH DEBUG ===");
-  console.log("Received idToken:", idToken ? "YES" : "NO");
-  console.log("Token length:", idToken?.length);
-  console.log("Token preview:", idToken?.substring(0, 50) + "...");
 
   if (!idToken) {
     return res.status(400).json({ success: false, message: 'ID token is required' });
   }
 
   try {
-    console.log("Attempting to verify token...");
     const decodedToken = await admin.auth().verifyIdToken(idToken);
-    console.log("Token verified successfully!");
-    console.log("Decoded token:", decodedToken);
-    
     const { uid, email, name, picture } = decodedToken;
 
     if (!email) {
@@ -210,11 +201,19 @@ router.post('/firebase-google-auth', async (req, res) => {
 
     res.status(200).json({ success: true, message: 'User authenticated', user: user });
   } catch (error) {
-    console.error('=== ERROR DETAILS ===');
-    console.error('Error code:', error.code);
-    console.error('Error message:', error.message);
-    console.error('Full error:', error);
-    res.status(401).json({ success: false, message: 'Invalid ID token' });
+    console.error('Firebase Google auth error:', error);
+
+    const response = {
+      success: false,
+      message: 'Invalid ID token',
+    };
+
+    if (process.env.NODE_ENV !== 'production') {
+      response.firebaseErrorCode = error.code || null;
+      response.firebaseErrorMessage = error.message || null;
+    }
+
+    res.status(401).json(response);
   }
 });
 

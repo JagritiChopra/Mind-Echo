@@ -11,6 +11,27 @@ import { auth } from "../../config/firebase";
 import { useNavigate } from "react-router-dom";
 import { loginUser, googleAuth, clearError, clearSuccess } from '../../store/slices/authSlice';
 
+const getGoogleAuthErrorMessage = (error) => {
+  if (error.code === "auth/popup-closed-by-user") {
+    return "Sign-in popup was closed. Please try again.";
+  }
+
+  if (error.code === "auth/popup-blocked") {
+    return "Sign-in popup was blocked. Please allow popups for this website.";
+  }
+
+  if (
+    error.code === "auth/network-request-failed" ||
+    error.code === "auth/internal-error" ||
+    error.message?.includes("ERR_NAME_NOT_RESOLVED") ||
+    error.message?.includes("apis.google.com")
+  ) {
+    return "Google Sign-In could not reach Google's servers. Check your internet connection, DNS, firewall, VPN, or ad blocker and try again.";
+  }
+
+  return "Google sign-in failed. Please try again.";
+};
+
 const LoginForm = () => {
   // Redux state
   const dispatch = useDispatch();
@@ -118,15 +139,7 @@ const LoginForm = () => {
 
     } catch (error) {
       console.error("Google sign-in error:", error);
-
-      let errorMessage = "Google sign-in failed. Please try again.";
-      if (error.code === "auth/popup-closed-by-user") {
-        errorMessage = "Sign-in popup was closed. Please try again.";
-      } else if (error.code === "auth/popup-blocked") {
-        errorMessage = "Sign-in popup was blocked. Please allow popups for this website.";
-      }
-
-      setMessage(errorMessage);
+      setMessage(getGoogleAuthErrorMessage(error));
       setMessageType("error");
     }
 

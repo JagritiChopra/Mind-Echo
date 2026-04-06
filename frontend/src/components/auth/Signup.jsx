@@ -12,6 +12,27 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { registerUser, googleAuth, clearError } from "../../store/slices/authSlice";
 
+const getGoogleAuthErrorMessage = (error) => {
+  if (error.code === "auth/popup-closed-by-user") {
+    return "Sign-in popup was closed. Please try again.";
+  }
+
+  if (error.code === "auth/popup-blocked") {
+    return "Sign-up popup was blocked. Please allow popups for this website.";
+  }
+
+  if (
+    error.code === "auth/network-request-failed" ||
+    error.code === "auth/internal-error" ||
+    error.message?.includes("ERR_NAME_NOT_RESOLVED") ||
+    error.message?.includes("apis.google.com")
+  ) {
+    return "Google Sign-In could not reach Google's servers. Check your internet connection, DNS, firewall, VPN, or ad blocker and try again.";
+  }
+
+  return "Google sign-up failed. Please try again.";
+};
+
 const SignupForm = () => {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
@@ -158,33 +179,17 @@ const SignupForm = () => {
   };
 
   const handleGoogleSignup = async () => {
-        // console.log("API_BASE_URL:", API_BASE_URL);
-  console.log("ENV VITE_API_BASE_URL:", import.meta.env.VITE_API_BASE_URL);
-  //alert(`API URL: ${VITE_API_BASE_URL}`);
-
     setMessage("");
     setGoogleLoading(true);
     dispatch(clearError());
 
     try {
-       console.log("Creating Google provider...");
-    const provider = new GoogleAuthProvider();
-    
-    console.log("Opening popup...");
-    const userCred = await signInWithPopup(auth, provider);
-    console.log("Popup successful, user:", userCred.user);
-
-    const idToken = await userCred.user.getIdToken();
-    console.log("Got ID token");
-    localStorage.setItem("authToken", idToken);
-
-    console.log("Dispatching googleAuth...");
-    const resultAction = await dispatch(googleAuth(idToken));
-    console.log("Google auth result:", resultAction);
+      const provider = new GoogleAuthProvider();
+      const userCred = await signInWithPopup(auth, provider);
+      const idToken = await userCred.user.getIdToken();
+      localStorage.setItem("authToken", idToken);
+      const resultAction = await dispatch(googleAuth(idToken));
       
-      console.log("Google auth result:", resultAction);
-
-
       if (googleAuth.fulfilled.match(resultAction)) {
         setMessage("Google sign-up successful! Redirecting...");
         setMessageType("success");
@@ -197,15 +202,7 @@ const SignupForm = () => {
       }
     } catch (error) {
       console.error("Google sign-up error:", error);
-
-      let errorMessage = "Google sign-up failed. Please try again.";
-      if (error.code === "auth/popup-closed-by-user") {
-        errorMessage = "Sign-in popup was closed. Please try again.";
-      } else if (error.code === "auth/popup-blocked") {
-        errorMessage = "Sign-up popup was blocked. Please allow popups for this website.";
-      }
-
-      setMessage(errorMessage);
+      setMessage(getGoogleAuthErrorMessage(error));
       setMessageType("error");
     }
 

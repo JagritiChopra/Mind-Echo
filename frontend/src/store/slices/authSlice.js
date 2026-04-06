@@ -85,24 +85,25 @@ export const registerUser = createAsyncThunk(
 export const googleAuth = createAsyncThunk(
   'auth/googleAuth',
   async (idToken, { rejectWithValue }) => {
-    // console.log(idToken);
     try {
       const response = await fetch(`${API_BASE_URL}/auth/firebase/firebase-google-auth`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' 
-          
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken }),
       });
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Google authentication failed');
+        throw new Error(
+          errorData.firebaseErrorMessage ||
+          errorData.message ||
+          'Google authentication failed'
+        );
       }
       
       const data = await response.json();
       localStorage.setItem('authToken', idToken);
-      return data.user;
+      return { user: data.user, token: idToken };
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -312,7 +313,10 @@ const authSlice = createSlice({
       })
       .addCase(googleAuth.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.isAuthenticated = true;
+        state.isInitialLoad = false;
         state.hasCheckedAuth = true;
       })
       .addCase(googleAuth.rejected, (state, action) => {

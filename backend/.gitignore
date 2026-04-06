@@ -10,7 +10,7 @@ yarn-error.log*
 
 # Environment variables
 .env
-
+.env.example
 # Firebase secret key
 config/serviceAccount.json
 

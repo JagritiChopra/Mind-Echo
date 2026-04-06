@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import dns from "dns";
 import connectDB from "./utils/db.js";
 
 // Routes
@@ -10,24 +11,28 @@ import firebaseAuthRoutes from "./routes/firebase.route.js";
 import insightRoutes from "./routes/insight.route.js";
 import searchRoutes from "./routes/search.route.js";
 
+dns.setServers(["1.1.1.1"]);
+
 dotenv.config();
 
 const app = express();
-// const PORT = process.env.PORT || 3000; uncommnet in develpment
+const PORT = process.env.PORT || 3000;
+
 // ----------------- DB Connection Cache -----------------
 let cachedDb = null;
+
 async function initDB() {
   if (cachedDb) return cachedDb;
 
   try {
     if (process.env.MONGO_URI) {
       cachedDb = await connectDB();
-      console.log("✅ MongoDB connected");
+      console.log("MongoDB connected");
     } else {
-      console.warn("⚠️ MONGO_URI not set — skipping DB connect");
+      console.warn("MONGO_URI not set - skipping DB connect");
     }
   } catch (err) {
-    console.error("❌ MongoDB connection failed:", err.message);
+    console.error("MongoDB connection failed:", err.message);
   }
 
   return cachedDb;
@@ -37,32 +42,49 @@ async function initDB() {
 initDB();
 
 // ----------------- CORS -----------------
-const allowedOrigins = [
+const envAllowedOrigins = [
+  process.env.CLIENT_URL,
+  process.env.FRONTEND_URL,
+  process.env.CORS_ORIGIN,
+  ...(process.env.CORS_ORIGINS?.split(",") || []),
+]
+  .map((origin) => origin?.trim())
+  .filter(Boolean);
+
+const defaultAllowedOrigins = [
   "https://mind-echo-xxlv.vercel.app",
- 
+  "http://localhost:3000",
   "http://localhost:5173",
-    "http://localhost:3000",
 ];
+
+const allowedOrigins = [...new Set([...defaultAllowedOrigins, ...envAllowedOrigins])];
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+
+  // Allow any localhost dev server port.
+  if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) return true;
+
+  // Allow Vercel preview deployments.
+  if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return true;
+
+  return false;
+};
+
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-    
-    // Allow exact matches
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    
-    // Allow any *.vercel.app domain (for preview deployments)
-    if (origin.endsWith('.vercel.app')) return callback(null, true);
-    
-    callback(new Error("Not allowed by CORS"));
+    if (isAllowedOrigin(origin)) return callback(null, true);
+    callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 204,
 };
 
 app.use(cors(corsOptions));
-
 app.options(/.*/, cors(corsOptions));
-
 app.use(express.json());
 
 // ----------------- Prevent favicon/image crashes -----------------
@@ -86,7 +108,7 @@ app.use((req, res, next) => {
   }
 
   if (missingParams.length > 0) {
-    console.warn(`⚠️ Missing parameters: ${missingParams.join(", ")}`);
+    console.warn(`Missing parameters: ${missingParams.join(", ")}`);
   }
 
   next();
@@ -111,11 +133,10 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: "Something went wrong!" });
 });
 
-
-// ✅ Start server  uncommment in development
-// app.listen(PORT, () => {
-//   console.log(`🚀 Server running on port ${PORT}`);
-// });
+// Start server in development
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
 // ----------------- Export for Vercel -----------------
 export default app;
