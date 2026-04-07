@@ -27,7 +27,9 @@ async function initDB() {
   try {
     if (process.env.MONGO_URI) {
       cachedDb = await connectDB();
-      console.log("MongoDB connected");
+      if (process.env.NODE_ENV !== "production") {
+          console.log("MongoDB connected");
+      }
     } else {
       console.warn("MONGO_URI not set - skipping DB connect");
     }
@@ -51,13 +53,7 @@ const envAllowedOrigins = [
   .map((origin) => origin?.trim())
   .filter(Boolean);
 
-const defaultAllowedOrigins = [
-  "https://mind-echo-xxlv.vercel.app",
-  "http://localhost:3000",
-  "http://localhost:5173",
-];
-
-const allowedOrigins = [...new Set([...defaultAllowedOrigins, ...envAllowedOrigins])];
+const allowedOrigins = [...new Set(envAllowedOrigins)];
 
 const isAllowedOrigin = (origin) => {
   if (!origin) return true;
@@ -134,9 +130,10 @@ app.use((err, req, res, next) => {
 });
 
 // Start server in development
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 // ----------------- Export for Vercel -----------------
 export default app;
