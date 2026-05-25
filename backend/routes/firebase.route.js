@@ -198,8 +198,11 @@ router.post('/firebase-google-auth', async (req, res) => {
       });
       await user.save();
     }
+const token = jwt.sign({ id: user._id.toString() }, process.env.JWT_SECRET, {
+      expiresIn: '7d',
+    });
 
-    res.status(200).json({ success: true, message: 'User authenticated', user: user });
+    res.status(200).json({ success: true, message: 'User authenticated', user, token });
   } catch (error) {
     console.error('Firebase Google auth error:', error);
 
