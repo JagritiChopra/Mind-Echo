@@ -84,11 +84,11 @@ app.options(/.*/, cors(corsOptions));
 app.use(express.json());
 
 // Set headers to allow popup authentication (Firebase OAuth)
-app.use((req, res, next) => {
-  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
-  res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
-  next();
-});
+// app.use((req, res, next) => {
+//   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+//   res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+//   next();
+// });
 
 // ----------------- Prevent favicon/image crashes -----------------
 app.get("/favicon.ico", (req, res) => res.status(204).end());
