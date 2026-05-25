@@ -102,8 +102,8 @@ export const googleAuth = createAsyncThunk(
       }
       
       const data = await response.json();
-      localStorage.setItem('authToken', idToken);
-      return { user: data.user, token: idToken };
+      localStorage.setItem('authToken', data.token);
+      return { user: data.user, token: data.token };
     } catch (error) {
       return rejectWithValue(error.message);
     }
